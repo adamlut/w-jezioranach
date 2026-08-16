@@ -7,11 +7,15 @@
   --text-dim: #9aa4b5;
   --accent: #4fa3ff;
   --accent-dim: #2c5a8c;
-  --mini-player-height: 7.5rem;
 }
 
 * {
   box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
 }
 
 body {
@@ -20,11 +24,21 @@ body {
   background: var(--bg);
   color: var(--text);
   line-height: 1.5;
-  /* Keep the fixed mini-player from covering the end of the episode list. */
-  padding-bottom: var(--mini-player-height);
+  /* App-shell layout: header and player keep their natural size, the
+     episode list panel gets whatever's left and scrolls internally. This
+     keeps the player's real screen position/size independent from list
+     content, instead of overlaying a page that scrolls underneath it -
+     which is what let touches meant for the player (play/pause, seek bar)
+     land on episode list items instead. */
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
 }
 
 .site-header {
+  flex: 0 0 auto;
   padding: 1.25rem 1rem 0.75rem;
   text-align: center;
   border-bottom: 1px solid var(--border);
@@ -48,19 +62,31 @@ body {
 }
 
 main {
+  flex: 1 1 auto;
+  min-height: 0;
   max-width: 900px;
+  width: 100%;
   margin: 0 auto;
   padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .episode-list-panel {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 1rem;
+  overflow: hidden;
 }
 
 .list-controls {
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -88,8 +114,14 @@ main {
   display: none !important;
 }
 
+/* The scrollable region: only this area scrolls, never the whole page. */
 .group-grid {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   display: grid;
+  align-content: start;
   grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
   gap: 0.75rem;
 }
@@ -130,8 +162,17 @@ main {
   color: var(--text-dim);
 }
 
+.group-detail {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 .back-btn {
+  flex: 0 0 auto;
   display: inline-block;
+  align-self: flex-start;
   margin-bottom: 0.75rem;
   background: var(--panel-alt);
   border: 1px solid var(--border);
@@ -146,7 +187,13 @@ main {
   border-color: var(--accent);
 }
 
+/* The other scrollable region (mutually exclusive with .group-grid, since
+   only one of the two is un-hidden at a time). */
 .episode-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   list-style: none;
   margin: 0;
   padding: 0;
@@ -191,44 +238,41 @@ main {
   text-decoration: underline;
 }
 
-/* Mini-player: fixed to the bottom of the viewport so playback controls
-   stay within thumb reach regardless of scroll position. */
+/* Mini-player: a normal flex child pinned at the bottom of the app shell,
+   not an overlay - so it never shares screen space with the episode list
+   and can't lose touches to it. */
 .mini-player {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  flex: 0 0 auto;
   background: var(--panel);
   border-top: 1px solid var(--border);
-  padding: 0.6rem 0.75rem calc(0.6rem + env(safe-area-inset-bottom));
-  z-index: 10;
+  padding: 1rem 1rem calc(1rem + env(safe-area-inset-bottom));
 }
 
 .mini-player audio {
   display: block;
   width: 100%;
   max-width: 900px;
-  height: 32px;
-  margin: 0 auto 0.5rem;
+  height: 54px;
+  margin: 0 auto 0.75rem;
 }
 
 .transport {
   display: grid;
-  grid-template-columns: 3rem 1fr 3rem;
+  grid-template-columns: 4rem 1fr 4rem;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
   max-width: 900px;
   margin: 0 auto;
 }
 
 .nav-btn {
-  width: 3rem;
-  height: 3rem;
+  width: 4rem;
+  height: 4rem;
   border-radius: 50%;
   border: none;
   background: var(--accent-dim);
   color: var(--text);
-  font-size: 1.5rem;
+  font-size: 2rem;
   line-height: 1;
   cursor: pointer;
   display: flex;
@@ -254,11 +298,11 @@ main {
 #now-playing-title {
   display: block;
   font-weight: 700;
-  font-size: 1.1rem;
+  font-size: 1.3rem;
 }
 
 #now-playing-date {
   display: block;
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   color: var(--text-dim);
 }
