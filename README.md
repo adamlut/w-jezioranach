@@ -69,3 +69,18 @@ neither of these makes the site private - the repo and the published page
 are both still publicly reachable by anyone with the link, since GitHub
 Pages doesn't support access control on the free plan. Share the URL only
 with people you want to have it.
+
+## App icon / "Add to Home Screen"
+
+`docs/manifest.json` plus the icons in [`docs/icons/`](docs/icons) let
+mobile browsers treat the site like an installed app when added to the
+home screen (standalone window, no browser chrome, custom icon). The icon
+is an original "WJ" monogram, not the official podcast cover art - this
+project only links to Polskie Radio's audio, so it deliberately doesn't
+redistribute their artwork either. Regenerate it with:
+
+```bash
+python scripts/generate_icons.py
+```
+
+On iOS: open the site in Safari, tap Share, then "Add to Home Screen".
