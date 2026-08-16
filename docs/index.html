@@ -46,12 +46,24 @@
   <audio id="audio-player" preload="none"></audio>
 
   <div class="controls-row">
-    <button id="skip-back-btn" type="button" class="nav-btn skip-btn" aria-label="Cofnij 10 sekund">-10s</button>
+    <button id="skip-back-btn" type="button" class="nav-btn skip-btn" aria-label="Cofnij 10 sekund">
+      <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" focusable="false">
+        <path d="M12,4 A8,8 0 1 0 20,12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <polygon points="23,10 20,15.5 17,10" fill="currentColor"/>
+        <text x="12" y="15.5" text-anchor="middle" font-size="7.5" font-weight="700" fill="currentColor">10</text>
+      </svg>
+    </button>
     <button id="play-pause-btn" type="button" class="nav-btn play-btn" aria-label="Odtwórz">
       <span id="icon-play" class="icon-play"></span>
       <span id="icon-pause" class="icon-pause" hidden><span></span><span></span></span>
     </button>
-    <button id="skip-forward-btn" type="button" class="nav-btn skip-btn" aria-label="Przewiń 10 sekund do przodu">+10s</button>
+    <button id="skip-forward-btn" type="button" class="nav-btn skip-btn" aria-label="Przewiń 10 sekund do przodu">
+      <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" focusable="false">
+        <path d="M12,4 A8,8 0 1 1 4,12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <polygon points="1,10 4,15.5 7,10" fill="currentColor"/>
+        <text x="12" y="15.5" text-anchor="middle" font-size="7.5" font-weight="700" fill="currentColor">10</text>
+      </svg>
+    </button>
   </div>
 
   <div class="seek-wrap">
