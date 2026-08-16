@@ -7,6 +7,7 @@
   --text-dim: #9aa4b5;
   --accent: #4fa3ff;
   --accent-dim: #2c5a8c;
+  --mini-player-height: 7.5rem;
 }
 
 * {
@@ -19,29 +20,26 @@ body {
   background: var(--bg);
   color: var(--text);
   line-height: 1.5;
+  /* Keep the fixed mini-player from covering the end of the episode list. */
+  padding-bottom: var(--mini-player-height);
 }
 
 .site-header {
-  padding: 2rem 1.5rem 1rem;
+  padding: 1.25rem 1rem 0.75rem;
   text-align: center;
   border-bottom: 1px solid var(--border);
 }
 
 .site-header h1 {
-  margin: 0 0 0.25rem;
-  font-size: 2rem;
+  margin: 0 0 0.5rem;
+  font-size: 1.4rem;
   letter-spacing: 0.02em;
-}
-
-.subtitle {
-  color: var(--text-dim);
-  margin: 0 0 0.75rem;
 }
 
 .disclaimer {
   max-width: 640px;
   margin: 0 auto;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   color: var(--text-dim);
 }
 
@@ -52,87 +50,22 @@ body {
 main {
   max-width: 900px;
   margin: 0 auto;
-  padding: 1.5rem;
-  display: grid;
-  gap: 1.5rem;
-}
-
-.player-panel {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 1.5rem;
-  text-align: center;
-}
-
-.now-playing-label {
-  display: block;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-dim);
-}
-
-#now-playing-title {
-  margin: 0.25rem 0;
-  font-size: 1.4rem;
-}
-
-.now-playing-date {
-  color: var(--text-dim);
-  font-size: 0.9rem;
-}
-
-#audio-player {
-  width: 100%;
-  margin: 1rem 0;
-}
-
-.transport {
-  display: flex;
-  justify-content: center;
-  gap: 0.75rem;
-}
-
-.transport button {
-  background: var(--accent-dim);
-  color: var(--text);
-  border: none;
-  border-radius: 8px;
-  padding: 0.6rem 1.2rem;
-  font-size: 0.95rem;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.transport button:hover:not(:disabled) {
-  background: var(--accent);
-}
-
-.transport button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.hint {
-  color: var(--text-dim);
-  font-size: 0.8rem;
-  margin: 1rem 0 0;
+  padding: 1rem;
 }
 
 .episode-list-panel {
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 1.5rem;
+  padding: 1rem;
 }
 
 .list-controls {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 1rem;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
 }
 
 #search-box {
@@ -140,14 +73,14 @@ main {
   background: var(--panel-alt);
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 0.5rem 0.75rem;
+  padding: 0.6rem 0.75rem;
   color: var(--text);
   font-size: 0.9rem;
 }
 
 .episode-count {
   color: var(--text-dim);
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   white-space: nowrap;
 }
 
@@ -155,15 +88,13 @@ main {
   list-style: none;
   margin: 0;
   padding: 0;
-  max-height: 480px;
-  overflow-y: auto;
 }
 
 .episode-item {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.6rem 0.75rem;
+  padding: 0.75rem;
   border-radius: 8px;
   cursor: pointer;
   border: 1px solid transparent;
@@ -198,13 +129,74 @@ main {
   text-decoration: underline;
 }
 
-.site-footer {
-  text-align: center;
-  color: var(--text-dim);
-  font-size: 0.8rem;
-  padding: 1.5rem;
+/* Mini-player: fixed to the bottom of the viewport so playback controls
+   stay within thumb reach regardless of scroll position. */
+.mini-player {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--panel);
+  border-top: 1px solid var(--border);
+  padding: 0.6rem 0.75rem calc(0.6rem + env(safe-area-inset-bottom));
+  z-index: 10;
 }
 
-.site-footer a {
-  color: var(--accent);
+.mini-player audio {
+  display: block;
+  width: 100%;
+  max-width: 900px;
+  height: 32px;
+  margin: 0 auto 0.5rem;
+}
+
+.transport {
+  display: grid;
+  grid-template-columns: 3rem 1fr 3rem;
+  align-items: center;
+  gap: 0.5rem;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.nav-btn {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  border: none;
+  background: var(--accent-dim);
+  color: var(--text);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.nav-btn:hover:not(:disabled) {
+  background: var(--accent);
+}
+
+.nav-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.now-playing {
+  text-align: center;
+  overflow: hidden;
+}
+
+#now-playing-title {
+  display: block;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+#now-playing-date {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--text-dim);
 }

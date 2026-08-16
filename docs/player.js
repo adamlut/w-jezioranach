@@ -90,7 +90,7 @@
     currentIndex = index;
     const ep = episodes[index];
 
-    nowPlayingTitle.textContent = ep.title || `Odcinek nr: ${ep.episode}`;
+    nowPlayingTitle.textContent = String(ep.episode);
     nowPlayingDate.textContent = formatDate(ep.date);
 
     audio.src = ep.mp3_url;

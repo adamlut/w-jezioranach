@@ -3,14 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>W Jezioranach - odtwarzacz archiwalnych odcinków</title>
-<meta name="description" content="Nieoficjalny odtwarzacz archiwalnych odcinków słuchowiska Polskiego Radia 'W Jezioranach', w poprawnej chronologicznej kolejności.">
+<title>W Jezioranach - archiwum</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <header class="site-header">
-  <h1>W Jezioranach</h1>
-  <p class="subtitle">Nieoficjalny odtwarzacz archiwalnych odcinków słuchowiska Polskiego Radia</p>
+  <h1>W Jezioranach - archiwum</h1>
   <p class="disclaimer">
     Ta strona nie hostuje ani nie kopiuje nagrań. Wszystkie pliki dźwiękowe są strumieniowane
     bezpośrednio z serwerów Polskiego Radia. Prawa autorskie do materiałów należą do
@@ -20,40 +18,26 @@
 </header>
 
 <main>
-  <section class="player-panel" aria-label="Odtwarzacz">
-    <div class="now-playing">
-      <span class="now-playing-label">Teraz odtwarzane</span>
-      <h2 id="now-playing-title">-</h2>
-      <span id="now-playing-date" class="now-playing-date"></span>
-    </div>
-
-    <audio id="audio-player" controls preload="none"></audio>
-
-    <div class="transport">
-      <button id="prev-btn" type="button">&#8592; Poprzedni</button>
-      <button id="next-btn" type="button">Następny &#8594;</button>
-    </div>
-
-    <p class="hint">
-      Kolejność "poprzedni"/"następny" odpowiada numeracji odcinków (rosnąco = chronologicznie do przodu).
-    </p>
-  </section>
-
   <section class="episode-list-panel" aria-label="Lista odcinków">
     <div class="list-controls">
-      <input type="search" id="search-box" placeholder="Szukaj odcinka po numerze lub dacie...">
+      <input type="search" id="search-box" placeholder="Szukaj po numerze lub dacie...">
       <span id="episode-count" class="episode-count"></span>
     </div>
     <ol id="episode-list" class="episode-list"></ol>
   </section>
 </main>
 
-<footer class="site-footer">
-  <p>
-    Dane pochodzą z publicznego archiwum
-    <a href="https://www.polskieradio.pl/357/7291" target="_blank" rel="noopener">Teatru Polskiego Radia</a>.
-  </p>
-</footer>
+<div class="mini-player" aria-label="Odtwarzacz">
+  <audio id="audio-player" controls preload="none"></audio>
+  <div class="transport">
+    <button id="prev-btn" type="button" class="nav-btn" aria-label="Poprzedni odcinek">&#8249;</button>
+    <div class="now-playing">
+      <span id="now-playing-title">-</span>
+      <span id="now-playing-date"></span>
+    </div>
+    <button id="next-btn" type="button" class="nav-btn" aria-label="Następny odcinek">&#8250;</button>
+  </div>
+</div>
 
 <script src="player.js"></script>
 </body>
