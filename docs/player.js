@@ -8,23 +8,38 @@
 // that actually navigates to an OLDER episode (a known bug on their site).
 // Here "Next" always moves to a higher episode number (forward) and
 // "Previous" always moves to a lower episode number (backward).
+//
+// Instead of one long scrolling list, episodes are chunked into fixed-size
+// groups (e.g. "#2371-#2395") shown as tiles on a landing grid. Picking a
+// tile opens that group's episode list; a "Powrot" button returns to the
+// grid. The group containing the currently playing episode is kept open
+// automatically, so navigation always lands you back in context. Searching
+// works across all episodes regardless of which group is open, and clears
+// once an episode is picked so the view settles back into that episode's
+// group.
 
 (function () {
   "use strict";
+
+  const GROUP_SIZE = 25;
+  const STORAGE_KEY = "wjezioranach:lastEpisode";
 
   const audio = document.getElementById("audio-player");
   const nowPlayingTitle = document.getElementById("now-playing-title");
   const nowPlayingDate = document.getElementById("now-playing-date");
   const prevBtn = document.getElementById("prev-btn");
   const nextBtn = document.getElementById("next-btn");
+  const groupGridEl = document.getElementById("group-grid");
+  const groupDetailEl = document.getElementById("group-detail");
+  const backBtn = document.getElementById("back-btn");
   const episodeListEl = document.getElementById("episode-list");
   const episodeCountEl = document.getElementById("episode-count");
   const searchBox = document.getElementById("search-box");
 
   let episodes = [];
+  let groups = []; // [{ startIndex, endIndex, startEpisode, endEpisode }]
   let currentIndex = -1;
-
-  const STORAGE_KEY = "wjezioranach:lastEpisode";
+  let activeGroupIndex = -1; // -1 means "show the groups grid"
 
   function formatDate(isoDate) {
     if (!isoDate) return "";
@@ -32,22 +47,67 @@
     return `${day}.${month}.${year}`;
   }
 
-  function renderList(filterText) {
-    const query = (filterText || "").trim().toLowerCase();
-    episodeListEl.innerHTML = "";
+  function buildGroups() {
+    const result = [];
+    for (let i = 0; i < episodes.length; i += GROUP_SIZE) {
+      const startIndex = i;
+      const endIndex = Math.min(i + GROUP_SIZE, episodes.length) - 1;
+      result.push({
+        startIndex,
+        endIndex,
+        startEpisode: episodes[startIndex].episode,
+        endEpisode: episodes[endIndex].episode,
+      });
+    }
+    return result;
+  }
 
-    const filtered = episodes.filter((ep, idx) => {
-      if (!query) return true;
-      return (
-        String(ep.episode).includes(query) ||
-        (ep.date || "").includes(query) ||
-        formatDate(ep.date).includes(query)
-      );
+  function groupIndexForEpisodeIndex(index) {
+    return groups.findIndex((g) => index >= g.startIndex && index <= g.endIndex);
+  }
+
+  function matchesQuery(ep, query) {
+    return (
+      String(ep.episode).includes(query) ||
+      (ep.date || "").includes(query) ||
+      formatDate(ep.date).includes(query)
+    );
+  }
+
+  function currentViewMode(query) {
+    if (query) return "search";
+    return activeGroupIndex === -1 ? "groups" : "group";
+  }
+
+  function renderGroupGrid() {
+    groupGridEl.innerHTML = "";
+    groups.forEach((g, idx) => {
+      const tile = document.createElement("button");
+      tile.type = "button";
+      tile.className = "group-tile";
+      if (idx === activeGroupIndex) tile.classList.add("active");
+
+      const range = document.createElement("span");
+      range.className = "group-tile-range";
+      range.textContent = `${g.startEpisode}–${g.endEpisode}`;
+
+      const count = document.createElement("span");
+      count.className = "group-tile-count";
+      count.textContent = `${g.endIndex - g.startIndex + 1} odcinków`;
+
+      tile.appendChild(range);
+      tile.appendChild(count);
+      tile.addEventListener("click", () => {
+        activeGroupIndex = idx;
+        render();
+      });
+      groupGridEl.appendChild(tile);
     });
+  }
 
-    episodeCountEl.textContent = `${filtered.length} / ${episodes.length} odcinków`;
-
-    for (const ep of filtered) {
+  function renderEpisodeItems(list) {
+    episodeListEl.innerHTML = "";
+    for (const ep of list) {
       const idx = episodes.indexOf(ep);
       const li = document.createElement("li");
       li.className = "episode-item";
@@ -79,10 +139,32 @@
     }
   }
 
-  function updateActiveListItem() {
-    for (const li of episodeListEl.children) {
-      li.classList.toggle("active", Number(li.dataset.index) === currentIndex);
+  function render() {
+    const query = searchBox.value.trim().toLowerCase();
+    const view = currentViewMode(query);
+
+    groupGridEl.hidden = view !== "groups";
+    groupDetailEl.hidden = view === "groups";
+    backBtn.hidden = view !== "group";
+
+    if (view === "groups") {
+      renderGroupGrid();
+      episodeCountEl.textContent = `${episodes.length} odcinków`;
+      return;
     }
+
+    if (view === "search") {
+      const results = episodes.filter((ep) => matchesQuery(ep, query));
+      renderEpisodeItems(results);
+      episodeCountEl.textContent = `${results.length} / ${episodes.length} odcinków`;
+      return;
+    }
+
+    // view === "group"
+    const g = groups[activeGroupIndex];
+    const groupEpisodes = episodes.slice(g.startIndex, g.endIndex + 1);
+    renderEpisodeItems(groupEpisodes);
+    episodeCountEl.textContent = `${groupEpisodes.length} / ${episodes.length} odcinków`;
   }
 
   function playEpisode(index, autoplay = true) {
@@ -104,7 +186,11 @@
     nextBtn.disabled = index >= episodes.length - 1;
 
     localStorage.setItem(STORAGE_KEY, String(ep.episode));
-    updateActiveListItem();
+
+    // Settle the view on the group that contains the newly playing episode.
+    activeGroupIndex = groupIndexForEpisodeIndex(index);
+    if (searchBox.value) searchBox.value = "";
+    render();
 
     const activeLi = episodeListEl.querySelector(`[data-index="${index}"]`);
     if (activeLi) activeLi.scrollIntoView({ block: "nearest" });
@@ -131,8 +217,7 @@
     const response = await fetch("episodes.json", { cache: "no-store" });
     episodes = await response.json();
     episodes.sort((a, b) => a.episode - b.episode);
-
-    renderList("");
+    groups = buildGroups();
 
     const startIndex = findStartIndex();
     playEpisode(startIndex, false);
@@ -140,7 +225,11 @@
     prevBtn.addEventListener("click", playPrevious);
     nextBtn.addEventListener("click", playNext);
     audio.addEventListener("ended", playNext);
-    searchBox.addEventListener("input", () => renderList(searchBox.value));
+    backBtn.addEventListener("click", () => {
+      activeGroupIndex = -1;
+      render();
+    });
+    searchBox.addEventListener("input", () => render());
   }
 
   init();
