@@ -60,3 +60,12 @@ published without a separate branch:
    pick the `main` branch, and select the `/docs` folder.
 4. Save. The site will be published at
    `https://<username>.github.io/<repo>/`.
+
+This is a small, family-only project and isn't meant to be discovered or
+shared publicly. [`docs/robots.txt`](docs/robots.txt) asks crawlers not to
+index it, and `index.html` also carries a `<meta name="robots"
+content="noindex, nofollow">` tag as a second line of defense. Note that
+neither of these makes the site private - the repo and the published page
+are both still publicly reachable by anyone with the link, since GitHub
+Pages doesn't support access control on the free plan. Share the URL only
+with people you want to have it.
