@@ -248,12 +248,97 @@ main {
   padding: 1rem 1rem calc(1rem + env(safe-area-inset-bottom));
 }
 
-.mini-player audio {
-  display: block;
-  width: 100%;
+/* The <audio> element is a playback engine only - see player.js for why
+   native controls are replaced with the custom UI below. */
+#audio-player {
+  display: none;
+}
+
+.playback-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
   max-width: 900px;
-  height: 54px;
   margin: 0 auto 0.75rem;
+}
+
+.play-btn {
+  flex: 0 0 auto;
+}
+
+.icon-play {
+  width: 0;
+  height: 0;
+  border-top: 0.7rem solid transparent;
+  border-bottom: 0.7rem solid transparent;
+  border-left: 1.1rem solid var(--text);
+  margin-left: 0.25rem;
+}
+
+.icon-pause {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.icon-pause span {
+  width: 0.4rem;
+  height: 1.4rem;
+  background: var(--text);
+  border-radius: 1px;
+}
+
+.seek-wrap {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.seek-bar {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 2rem;
+  background: transparent;
+  margin: 0;
+  cursor: pointer;
+}
+
+.seek-bar::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--panel-alt);
+}
+
+.seek-bar::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--accent);
+  margin-top: -7px;
+  border: none;
+}
+
+.seek-bar::-moz-range-track {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--panel-alt);
+}
+
+.seek-bar::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: none;
+}
+
+.time-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  margin-top: 0.15rem;
 }
 
 .transport {

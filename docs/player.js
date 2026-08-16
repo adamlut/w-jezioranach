@@ -17,6 +17,13 @@
 // works across all episodes regardless of which group is open, and clears
 // once an episode is picked so the view settles back into that episode's
 // group.
+//
+// Playback controls (play/pause, seek bar, time) are custom-built rather
+// than the native <audio controls> UI. iOS Safari renders native audio
+// controls with its own fixed OS-level widget that largely ignores CSS
+// sizing, so it couldn't be made to match the rest of the design. The
+// <audio> element itself stays in the DOM (hidden) purely as a playback
+// engine, driven entirely through its JS API.
 
 (function () {
   "use strict";
@@ -25,6 +32,12 @@
   const STORAGE_KEY = "wjezioranach:lastEpisode";
 
   const audio = document.getElementById("audio-player");
+  const playPauseBtn = document.getElementById("play-pause-btn");
+  const iconPlay = document.getElementById("icon-play");
+  const iconPause = document.getElementById("icon-pause");
+  const seekBar = document.getElementById("seek-bar");
+  const currentTimeEl = document.getElementById("current-time");
+  const durationTimeEl = document.getElementById("duration-time");
   const nowPlayingTitle = document.getElementById("now-playing-title");
   const nowPlayingDate = document.getElementById("now-playing-date");
   const prevBtn = document.getElementById("prev-btn");
@@ -40,11 +53,23 @@
   let groups = []; // [{ startIndex, endIndex, startEpisode, endEpisode }]
   let currentIndex = -1;
   let activeGroupIndex = -1; // -1 means "show the groups grid"
+  let isSeeking = false;
 
   function formatDate(isoDate) {
     if (!isoDate) return "";
     const [year, month, day] = isoDate.split("-");
     return `${day}.${month}.${year}`;
+  }
+
+  function formatTime(totalSeconds) {
+    if (!isFinite(totalSeconds) || totalSeconds < 0) return "0:00";
+    const total = Math.floor(totalSeconds);
+    const hours = Math.floor(total / 3600);
+    const minutes = Math.floor((total % 3600) / 60);
+    const seconds = total % 60;
+    const ss = String(seconds).padStart(2, "0");
+    if (hours > 0) return `${hours}:${String(minutes).padStart(2, "0")}:${ss}`;
+    return `${minutes}:${ss}`;
   }
 
   function buildGroups() {
@@ -175,6 +200,18 @@
     nowPlayingTitle.textContent = String(ep.episode);
     nowPlayingDate.textContent = formatDate(ep.date);
 
+    seekBar.value = 0;
+    seekBar.max = 0;
+    currentTimeEl.textContent = "0:00";
+    durationTimeEl.textContent = "0:00";
+
+    if ("mediaSession" in navigator) {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: `Odcinek nr ${ep.episode}`,
+        artist: "W Jezioranach",
+      });
+    }
+
     audio.src = ep.mp3_url;
     if (autoplay) {
       audio.play().catch(() => {
@@ -230,6 +267,48 @@
       render();
     });
     searchBox.addEventListener("input", () => render());
+
+    playPauseBtn.addEventListener("click", () => {
+      if (audio.paused) audio.play().catch(() => {});
+      else audio.pause();
+    });
+    audio.addEventListener("play", () => {
+      iconPlay.hidden = true;
+      iconPause.hidden = false;
+      playPauseBtn.setAttribute("aria-label", "Pauza");
+    });
+    audio.addEventListener("pause", () => {
+      iconPlay.hidden = false;
+      iconPause.hidden = true;
+      playPauseBtn.setAttribute("aria-label", "Odtwórz");
+    });
+    audio.addEventListener("loadedmetadata", () => {
+      seekBar.max = Math.floor(audio.duration) || 0;
+      durationTimeEl.textContent = formatTime(audio.duration);
+    });
+    audio.addEventListener("timeupdate", () => {
+      if (isSeeking) return;
+      seekBar.value = Math.floor(audio.currentTime);
+      currentTimeEl.textContent = formatTime(audio.currentTime);
+    });
+    seekBar.addEventListener("pointerdown", () => {
+      isSeeking = true;
+    });
+    seekBar.addEventListener("pointerup", () => {
+      isSeeking = false;
+    });
+    seekBar.addEventListener("input", () => {
+      const value = Number(seekBar.value);
+      audio.currentTime = value;
+      currentTimeEl.textContent = formatTime(value);
+    });
+
+    if ("mediaSession" in navigator) {
+      navigator.mediaSession.setActionHandler("play", () => audio.play().catch(() => {}));
+      navigator.mediaSession.setActionHandler("pause", () => audio.pause());
+      navigator.mediaSession.setActionHandler("previoustrack", playPrevious);
+      navigator.mediaSession.setActionHandler("nexttrack", playNext);
+    }
   }
 
   init();

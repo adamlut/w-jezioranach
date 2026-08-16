@@ -43,7 +43,22 @@
 </main>
 
 <div class="mini-player" aria-label="Odtwarzacz">
-  <audio id="audio-player" controls preload="none"></audio>
+  <audio id="audio-player" preload="none"></audio>
+
+  <div class="playback-row">
+    <button id="play-pause-btn" type="button" class="nav-btn play-btn" aria-label="Odtwórz">
+      <span id="icon-play" class="icon-play"></span>
+      <span id="icon-pause" class="icon-pause" hidden><span></span><span></span></span>
+    </button>
+    <div class="seek-wrap">
+      <input type="range" id="seek-bar" class="seek-bar" min="0" max="0" value="0" step="1" aria-label="Przewijanie">
+      <div class="time-row">
+        <span id="current-time">0:00</span>
+        <span id="duration-time">0:00</span>
+      </div>
+    </div>
+  </div>
+
   <div class="transport">
     <button id="prev-btn" type="button" class="nav-btn" aria-label="Poprzedni odcinek">&#8249;</button>
     <div class="now-playing">
