@@ -254,16 +254,24 @@ main {
   display: none;
 }
 
-.playback-row {
+.controls-row {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  justify-content: center;
+  gap: 1rem;
   max-width: 900px;
   margin: 0 auto 0.75rem;
 }
 
 .play-btn {
   flex: 0 0 auto;
+}
+
+.skip-btn {
+  width: 3.25rem;
+  height: 3.25rem;
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
 .icon-play {
@@ -288,8 +296,8 @@ main {
 }
 
 .seek-wrap {
-  flex: 1 1 auto;
-  min-width: 0;
+  max-width: 900px;
+  margin: 0 auto 0.75rem;
 }
 
 .seek-bar {
@@ -376,18 +384,56 @@ main {
 }
 
 .now-playing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
   text-align: center;
   overflow: hidden;
 }
 
 #now-playing-title {
-  display: block;
   font-weight: 700;
   font-size: 1.3rem;
 }
 
 #now-playing-date {
-  display: block;
   font-size: 0.75rem;
   color: var(--text-dim);
+}
+
+.download-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.1rem;
+  background: var(--panel-alt);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-dim);
+  padding: 0.3rem 0.7rem;
+  font-size: 0.7rem;
+  cursor: pointer;
+}
+
+.download-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.download-btn:disabled {
+  cursor: wait;
+}
+
+.download-btn.is-downloading .download-icon {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }

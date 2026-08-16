@@ -45,17 +45,20 @@
 <div class="mini-player" aria-label="Odtwarzacz">
   <audio id="audio-player" preload="none"></audio>
 
-  <div class="playback-row">
+  <div class="controls-row">
+    <button id="skip-back-btn" type="button" class="nav-btn skip-btn" aria-label="Cofnij 10 sekund">-10s</button>
     <button id="play-pause-btn" type="button" class="nav-btn play-btn" aria-label="Odtwórz">
       <span id="icon-play" class="icon-play"></span>
       <span id="icon-pause" class="icon-pause" hidden><span></span><span></span></span>
     </button>
-    <div class="seek-wrap">
-      <input type="range" id="seek-bar" class="seek-bar" min="0" max="0" value="0" step="1" aria-label="Przewijanie">
-      <div class="time-row">
-        <span id="current-time">0:00</span>
-        <span id="duration-time">0:00</span>
-      </div>
+    <button id="skip-forward-btn" type="button" class="nav-btn skip-btn" aria-label="Przewiń 10 sekund do przodu">+10s</button>
+  </div>
+
+  <div class="seek-wrap">
+    <input type="range" id="seek-bar" class="seek-bar" min="0" max="0" value="0" step="1" aria-label="Przewijanie">
+    <div class="time-row">
+      <span id="current-time">0:00</span>
+      <span id="duration-time">0:00</span>
     </div>
   </div>
 
@@ -64,6 +67,14 @@
     <div class="now-playing">
       <span id="now-playing-title">-</span>
       <span id="now-playing-date"></span>
+      <button id="download-btn" type="button" class="download-btn" aria-label="Pobierz odcinek">
+        <svg class="download-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 3v12"/>
+          <path d="M7 10l5 5 5-5"/>
+          <path d="M4 20h16"/>
+        </svg>
+        <span id="download-label" class="download-label">Pobierz</span>
+      </button>
     </div>
     <button id="next-btn" type="button" class="nav-btn" aria-label="Następny odcinek">&#8250;</button>
   </div>

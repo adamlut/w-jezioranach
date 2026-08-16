@@ -18,12 +18,19 @@
 // once an episode is picked so the view settles back into that episode's
 // group.
 //
-// Playback controls (play/pause, seek bar, time) are custom-built rather
-// than the native <audio controls> UI. iOS Safari renders native audio
-// controls with its own fixed OS-level widget that largely ignores CSS
-// sizing, so it couldn't be made to match the rest of the design. The
-// <audio> element itself stays in the DOM (hidden) purely as a playback
-// engine, driven entirely through its JS API.
+// Playback controls (play/pause, +/-10s skip, seek bar, time, download) are
+// custom-built rather than the native <audio controls> UI. iOS Safari
+// renders native audio controls with its own fixed OS-level widget that
+// largely ignores CSS sizing, so it couldn't be made to match the rest of
+// the design. The <audio> element itself stays in the DOM (hidden) purely
+// as a playback engine, driven entirely through its JS API.
+//
+// The download button fetches the mp3 into memory and saves it as a blob
+// URL rather than linking straight to it, because a plain <a download>
+// only gets to rename cross-origin files (this one is served from
+// static.prsa.pl, not our own origin) for same-origin/blob/data URLs -
+// otherwise browsers ignore the suggested filename. That's the only way to
+// reliably get the "w-jezioranach-####.mp3" naming.
 
 (function () {
   "use strict";
@@ -31,13 +38,19 @@
   const GROUP_SIZE = 25;
   const STORAGE_KEY = "wjezioranach:lastEpisode";
 
+  const SKIP_SECONDS = 10;
+
   const audio = document.getElementById("audio-player");
   const playPauseBtn = document.getElementById("play-pause-btn");
   const iconPlay = document.getElementById("icon-play");
   const iconPause = document.getElementById("icon-pause");
+  const skipBackBtn = document.getElementById("skip-back-btn");
+  const skipForwardBtn = document.getElementById("skip-forward-btn");
   const seekBar = document.getElementById("seek-bar");
   const currentTimeEl = document.getElementById("current-time");
   const durationTimeEl = document.getElementById("duration-time");
+  const downloadBtn = document.getElementById("download-btn");
+  const downloadLabel = document.getElementById("download-label");
   const nowPlayingTitle = document.getElementById("now-playing-title");
   const nowPlayingDate = document.getElementById("now-playing-date");
   const prevBtn = document.getElementById("prev-btn");
@@ -241,6 +254,49 @@
     playEpisode(currentIndex - 1);
   }
 
+  function skip(deltaSeconds) {
+    if (!isFinite(audio.duration)) return;
+    audio.currentTime = Math.min(Math.max(audio.currentTime + deltaSeconds, 0), audio.duration);
+  }
+
+  async function downloadCurrentEpisode() {
+    if (currentIndex < 0 || downloadBtn.disabled) return;
+    const ep = episodes[currentIndex];
+    const filename = `w-jezioranach-${ep.episode}.mp3`;
+
+    downloadBtn.disabled = true;
+    downloadBtn.classList.add("is-downloading");
+    downloadLabel.textContent = "Pobieranie...";
+
+    try {
+      // A plain <a download> only gets to name cross-origin files like this
+      // one for same-origin/blob/data URLs - browsers ignore the suggested
+      // name otherwise. Fetching the file ourselves and downloading it as a
+      // blob URL (same-origin by definition) is what actually lets us set
+      // the "w-jezioranach-####.mp3" filename.
+      const response = await fetch(ep.mp3_url);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      // Fall back to a plain navigation so the user can still save the file
+      // manually, just without the custom filename.
+      window.open(ep.mp3_url, "_blank", "noopener");
+    } finally {
+      downloadBtn.disabled = false;
+      downloadBtn.classList.remove("is-downloading");
+      downloadLabel.textContent = "Pobierz";
+    }
+  }
+
   function findStartIndex() {
     const savedEpisode = Number(localStorage.getItem(STORAGE_KEY));
     if (savedEpisode) {
@@ -303,11 +359,17 @@
       currentTimeEl.textContent = formatTime(value);
     });
 
+    skipBackBtn.addEventListener("click", () => skip(-SKIP_SECONDS));
+    skipForwardBtn.addEventListener("click", () => skip(SKIP_SECONDS));
+    downloadBtn.addEventListener("click", downloadCurrentEpisode);
+
     if ("mediaSession" in navigator) {
       navigator.mediaSession.setActionHandler("play", () => audio.play().catch(() => {}));
       navigator.mediaSession.setActionHandler("pause", () => audio.pause());
       navigator.mediaSession.setActionHandler("previoustrack", playPrevious);
       navigator.mediaSession.setActionHandler("nexttrack", playNext);
+      navigator.mediaSession.setActionHandler("seekbackward", () => skip(-SKIP_SECONDS));
+      navigator.mediaSession.setActionHandler("seekforward", () => skip(SKIP_SECONDS));
     }
   }
 
