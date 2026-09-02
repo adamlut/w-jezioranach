@@ -61,6 +61,7 @@
   const episodeListEl = document.getElementById("episode-list");
   const episodeCountEl = document.getElementById("episode-count");
   const searchBox = document.getElementById("search-box");
+  const missingNoteEl = document.getElementById("missing-note");
 
   let episodes = [];
   let groups = []; // [{ startIndex, endIndex, startEpisode, endEpisode }]
@@ -102,6 +103,32 @@
 
   function groupIndexForEpisodeIndex(index) {
     return groups.findIndex((g) => index >= g.startIndex && index <= g.endIndex);
+  }
+
+  // Episode numbers absent from the *currently scraped* range - not to be
+  // confused with the much larger range we simply haven't crawled yet
+  // (which sits outside [min, max] and is never flagged here). These are
+  // genuine gaps in Polskie Radio's own catalog.
+  function computeMissingEpisodes() {
+    if (episodes.length === 0) return [];
+    const present = new Set(episodes.map((ep) => ep.episode));
+    const min = episodes[0].episode;
+    const max = episodes[episodes.length - 1].episode;
+    const missing = [];
+    for (let n = min; n <= max; n++) {
+      if (!present.has(n)) missing.push(n);
+    }
+    return missing;
+  }
+
+  function renderMissingNote() {
+    const missing = computeMissingEpisodes();
+    if (missing.length === 0) {
+      missingNoteEl.hidden = true;
+      return;
+    }
+    missingNoteEl.hidden = false;
+    missingNoteEl.textContent = `Uwaga: w archiwum Polskiego Radia brakuje odcinków nr ${missing.join(", ")} - to nie błąd tej strony.`;
   }
 
   function matchesQuery(ep, query) {
@@ -311,6 +338,7 @@
     episodes = await response.json();
     episodes.sort((a, b) => a.episode - b.episode);
     groups = buildGroups();
+    renderMissingNote();
 
     const startIndex = findStartIndex();
     playEpisode(startIndex, false);

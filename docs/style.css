@@ -94,6 +94,17 @@ main {
   margin-bottom: 0.75rem;
 }
 
+.missing-note {
+  flex: 0 0 auto;
+  margin: -0.25rem 0 0.75rem;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  background: var(--panel-alt);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+}
+
 #search-box {
   flex: 1;
   background: var(--panel-alt);

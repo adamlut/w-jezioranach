@@ -67,7 +67,22 @@ def list_episode_links(page_number: int) -> list[dict]:
                 "article_url": urljoin(BASE_URL, link["href"]),
             }
         )
-    return episodes
+    return _drop_outliers(episodes)
+
+
+def _drop_outliers(episodes: list[dict], max_spread: int = 20) -> list[dict]:
+    """Archive pages also embed a "latest episode" promo widget, which can
+    surface an episode number far outside this page's actual ~30-episode
+    listing (e.g. page 21, covering #2581-2610, also linked #2804 - whatever
+    was the newest episode overall at scrape time). Drop anything too far
+    from the page's median episode number rather than treat a stray promo
+    link as belonging to this page.
+    """
+    if len(episodes) < 2:
+        return episodes
+    numbers = sorted(ep["episode"] for ep in episodes)
+    median = numbers[len(numbers) // 2]
+    return [ep for ep in episodes if abs(ep["episode"] - median) <= max_spread]
 
 
 def parse_article(article_url: str) -> dict | None:
