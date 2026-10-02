@@ -40,6 +40,15 @@ HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; WJezioranyArchiveBot/1.0)"}
 REQUEST_DELAY_SECONDS = 0.5
 
 EPISODE_NUMBER_RE = re.compile(r"Odcinek nr:\s*(\d+)")
+
+# Articles whose title carries the wrong episode number on polskieradio.pl,
+# keyed by article ID. Verified by air date and article ID sitting between
+# their neighbours (e.g. 1508870 aired 07.08.2011, between #2603 on 31.07
+# and #2605 on 14.08, but is titled "Odcinek nr: 2804").
+EPISODE_NUMBER_CORRECTIONS = {
+    1508870: 2604,
+}
+ARTICLE_ID_RE = re.compile(r"/Artykul/(\d+)")
 DATA_MEDIA_RE = re.compile(r"data-media=(\{[^{}]*\})")
 DATE_RE = re.compile(r'id="datetime\d+"[^>]*>\s*(\d{2})\.(\d{2})\.(\d{4})')
 
@@ -61,9 +70,13 @@ def list_episode_links(page_number: int) -> list[dict]:
         match = EPISODE_NUMBER_RE.search(text)
         if not match:
             continue
+        episode_number = int(match.group(1))
+        id_match = ARTICLE_ID_RE.search(link["href"])
+        if id_match:
+            episode_number = EPISODE_NUMBER_CORRECTIONS.get(int(id_match.group(1)), episode_number)
         episodes.append(
             {
-                "episode": int(match.group(1)),
+                "episode": episode_number,
                 "article_url": urljoin(BASE_URL, link["href"]),
             }
         )
@@ -155,7 +168,9 @@ def crawl(start_page: int, end_page: int) -> None:
 
             episodes_by_number[episode_number] = {
                 "episode": episode_number,
-                "title": details["title"] or f"Odcinek nr: {episode_number}",
+                # Derived from the (possibly corrected) number rather than the
+                # article's own title, which may carry the wrong number.
+                "title": f"Odcinek nr: {episode_number}",
                 "date": details["date"],
                 "article_url": link["article_url"],
                 "mp3_url": details["mp3_url"],
