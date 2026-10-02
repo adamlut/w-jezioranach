@@ -105,6 +105,10 @@ main {
   padding: 0.5rem 0.75rem;
 }
 
+.missing-note a {
+  color: var(--accent);
+}
+
 #search-box {
   flex: 1;
   background: var(--panel-alt);

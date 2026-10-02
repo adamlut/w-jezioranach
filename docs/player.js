@@ -40,6 +40,15 @@
 
   const SKIP_SECONDS = 10;
 
+  // Episodes whose article exists on polskieradio.pl but has no audio
+  // attached (and so never appears in the archive listing or episodes.json).
+  // Linked from the missing-episodes notice so listeners can still read the
+  // description.
+  const AUDIOLESS_ARTICLES = {
+    2535: "https://www.polskieradio.pl/357/6991/Artykul/1508941",
+    2561: "https://www.polskieradio.pl/357/6991/Artykul/1508914",
+  };
+
   const audio = document.getElementById("audio-player");
   const playPauseBtn = document.getElementById("play-pause-btn");
   const iconPlay = document.getElementById("icon-play");
@@ -128,7 +137,28 @@
       return;
     }
     missingNoteEl.hidden = false;
-    missingNoteEl.textContent = `Uwaga: w archiwum Polskiego Radia brakuje odcinków nr ${missing.join(", ")} - to nie błąd tej strony.`;
+    missingNoteEl.textContent = "";
+
+    const single = missing.length === 1;
+    missingNoteEl.append(`Uwaga: ${single ? "nagranie odcinka" : "nagrania odcinków"} nr `);
+    missing.forEach((num, i) => {
+      if (i > 0) missingNoteEl.append(i === missing.length - 1 ? " i " : ", ");
+      const url = AUDIOLESS_ARTICLES[num];
+      if (url) {
+        const link = document.createElement("a");
+        link.href = url;
+        link.target = "_blank";
+        link.rel = "noopener";
+        link.textContent = String(num);
+        missingNoteEl.append(link);
+      } else {
+        missingNoteEl.append(String(num));
+      }
+    });
+    missingNoteEl.append(
+      ` ${single ? "nie jest dostępne" : "nie są dostępne"} w oficjalnych publicznych źródłach - ` +
+        "w archiwum Polskiego Radia brak plików dźwiękowych. To nie błąd tej strony."
+    );
   }
 
   function matchesQuery(ep, query) {
