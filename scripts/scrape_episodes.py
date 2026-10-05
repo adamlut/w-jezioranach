@@ -35,6 +35,10 @@ from bs4 import BeautifulSoup
 BASE_URL = "https://www.polskieradio.pl"
 ARCHIVE_PAGE_URL = f"{BASE_URL}/357/7291/Strona/{{page}}"
 EPISODES_JSON_PATH = Path(__file__).resolve().parent.parent / "docs" / "episodes.json"
+# Episodes whose article exists but has no audio attached. The player links
+# them from its "recording not available" notice. Some (e.g. 2535, 2561) are
+# also hidden from the archive listing, so they were added here by hand.
+AUDIOLESS_JSON_PATH = EPISODES_JSON_PATH.with_name("audioless.json")
 
 HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; WJezioranyArchiveBot/1.0)"}
 REQUEST_DELAY_SECONDS = 0.5
@@ -53,10 +57,24 @@ DATA_MEDIA_RE = re.compile(r"data-media=(\{[^{}]*\})")
 DATE_RE = re.compile(r'id="datetime\d+"[^>]*>\s*(\d{2})\.(\d{2})\.(\d{4})')
 
 
-def fetch(url: str) -> str:
-    resp = requests.get(url, headers=HEADERS, timeout=30)
-    resp.raise_for_status()
-    return resp.text
+def fetch(url: str, attempts: int = 4) -> str:
+    # polskieradio.pl occasionally returns a transient 502/503 or drops the
+    # connection; retry with backoff rather than abort a long crawl.
+    for attempt in range(1, attempts + 1):
+        try:
+            resp = requests.get(url, headers=HEADERS, timeout=30)
+            if resp.status_code < 500:
+                resp.raise_for_status()
+                return resp.text
+            error: Exception = requests.HTTPError(f"{resp.status_code} for {url}")
+        except (requests.ConnectionError, requests.Timeout) as exc:
+            error = exc
+        if attempt == attempts:
+            raise error
+        wait = 2 ** attempt
+        print(f"  retry {attempt}/{attempts - 1} in {wait}s ({error})", file=sys.stderr)
+        time.sleep(wait)
+    raise AssertionError("unreachable")
 
 
 def list_episode_links(page_number: int) -> list[dict]:
@@ -136,6 +154,23 @@ def load_existing_episodes() -> dict[int, dict]:
     return {ep["episode"]: ep for ep in data}
 
 
+def load_audioless() -> dict[int, str]:
+    if not AUDIOLESS_JSON_PATH.exists():
+        return {}
+    data = json.loads(AUDIOLESS_JSON_PATH.read_text(encoding="utf-8"))
+    return {ep["episode"]: ep["article_url"] for ep in data}
+
+
+def save_audioless(audioless: dict[int, str], episodes_by_number: dict[int, dict]) -> None:
+    # Drop any that have since gained audio and made it into episodes.json.
+    ordered = [
+        {"episode": num, "article_url": audioless[num]}
+        for num in sorted(audioless)
+        if num not in episodes_by_number
+    ]
+    AUDIOLESS_JSON_PATH.write_text(json.dumps(ordered, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
 def save_episodes(episodes_by_number: dict[int, dict]) -> None:
     ordered = [episodes_by_number[num] for num in sorted(episodes_by_number)]
     EPISODES_JSON_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -144,19 +179,28 @@ def save_episodes(episodes_by_number: dict[int, dict]) -> None:
     )
 
 
-def crawl(start_page: int, end_page: int) -> None:
+def crawl(start_page: int, end_page: int, max_new: int | None = None) -> None:
     step = 1 if end_page >= start_page else -1
     pages = range(start_page, end_page + step, step)
 
     episodes_by_number = load_existing_episodes()
     print(f"Loaded {len(episodes_by_number)} existing episode(s) from {EPISODES_JSON_PATH}")
+    audioless = load_audioless()
+    added = 0
 
     for page in pages:
+        if max_new is not None and added >= max_new:
+            break
         print(f"Archive page {page}...")
         links = list_episode_links(page)
         time.sleep(REQUEST_DELAY_SECONDS)
 
-        for link in links:
+        # Pages list episodes newest-first; walk them oldest-first so that a
+        # --max-new cut-off mid-page leaves no hole in the sequence (assuming
+        # pages are given newest-needed-last, e.g. --start 20 --end 17).
+        for link in sorted(links, key=lambda l: l["episode"]):
+            if max_new is not None and added >= max_new:
+                break
             episode_number = link["episode"]
             if episode_number in episodes_by_number:
                 continue
@@ -164,6 +208,7 @@ def crawl(start_page: int, end_page: int) -> None:
             details = parse_article(link["article_url"])
             time.sleep(REQUEST_DELAY_SECONDS)
             if details is None or not details["mp3_url"]:
+                audioless[episode_number] = link["article_url"]
                 continue
 
             episodes_by_number[episode_number] = {
@@ -175,19 +220,27 @@ def crawl(start_page: int, end_page: int) -> None:
                 "article_url": link["article_url"],
                 "mp3_url": details["mp3_url"],
             }
+            added += 1
             print(f"  + episode {episode_number} ({details['date']})")
 
     save_episodes(episodes_by_number)
-    print(f"Saved {len(episodes_by_number)} episode(s) to {EPISODES_JSON_PATH}")
+    save_audioless(audioless, episodes_by_number)
+    print(f"Added {added}, saved {len(episodes_by_number)} episode(s) to {EPISODES_JSON_PATH}")
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--start", type=int, required=True, help="First archive page to crawl")
     parser.add_argument("--end", type=int, required=True, help="Last archive page to crawl (inclusive)")
+    parser.add_argument(
+        "--max-new",
+        type=int,
+        default=None,
+        help="Stop after adding this many new episodes (e.g. to fill player groups of 25 exactly)",
+    )
     args = parser.parse_args()
 
-    crawl(args.start, args.end)
+    crawl(args.start, args.end, args.max_new)
 
 
 if __name__ == "__main__":

@@ -41,13 +41,10 @@
   const SKIP_SECONDS = 10;
 
   // Episodes whose article exists on polskieradio.pl but has no audio
-  // attached (and so never appears in the archive listing or episodes.json).
+  // attached (loaded from audioless.json, maintained by the scraper).
   // Linked from the missing-episodes notice so listeners can still read the
   // description.
-  const AUDIOLESS_ARTICLES = {
-    2535: "https://www.polskieradio.pl/357/6991/Artykul/1508941",
-    2561: "https://www.polskieradio.pl/357/6991/Artykul/1508914",
-  };
+  let audiolessArticles = {};
 
   const audio = document.getElementById("audio-player");
   const playPauseBtn = document.getElementById("play-pause-btn");
@@ -143,7 +140,7 @@
     missingNoteEl.append(`Uwaga: ${single ? "nagranie odcinka" : "nagrania odcinków"} nr `);
     missing.forEach((num, i) => {
       if (i > 0) missingNoteEl.append(i === missing.length - 1 ? " i " : ", ");
-      const url = AUDIOLESS_ARTICLES[num];
+      const url = audiolessArticles[num];
       if (url) {
         const link = document.createElement("a");
         link.href = url;
@@ -368,6 +365,12 @@
     episodes = await response.json();
     episodes.sort((a, b) => a.episode - b.episode);
     groups = buildGroups();
+    try {
+      const audioless = await fetch("audioless.json", { cache: "no-store" }).then((r) => r.json());
+      audiolessArticles = Object.fromEntries(audioless.map((ep) => [ep.episode, ep.article_url]));
+    } catch (err) {
+      // Optional data - the notice still lists numbers, just without links.
+    }
     renderMissingNote();
 
     const startIndex = findStartIndex();
