@@ -45,6 +45,7 @@
   // Linked from the missing-episodes notice so listeners can still read the
   // description.
   let audiolessArticles = {};
+  let missingEpisodes = new Set();
 
   const audio = document.getElementById("audio-player");
   const playPauseBtn = document.getElementById("play-pause-btn");
@@ -68,6 +69,7 @@
   const episodeCountEl = document.getElementById("episode-count");
   const searchBox = document.getElementById("search-box");
   const missingNoteEl = document.getElementById("missing-note");
+  const nowPlayingGapEl = document.getElementById("now-playing-gap");
 
   let episodes = [];
   let groups = []; // [{ startIndex, endIndex, startEpisode, endEpisode }]
@@ -127,8 +129,41 @@
     return missing;
   }
 
+  function appendEpisodeRef(parent, num) {
+    const url = audiolessArticles[num];
+    if (!url) {
+      parent.append(String(num));
+      return;
+    }
+    const link = document.createElement("a");
+    link.href = url;
+    link.target = "_blank";
+    link.rel = "noopener";
+    link.textContent = String(num);
+    parent.append(link);
+  }
+
+  // Flags when the episode(s) right before the current one are a known gap,
+  // so a listener going in order notices they're skipping a missing part.
+  function renderGapNote(ep) {
+    const gap = [];
+    for (let n = ep.episode - 1; missingEpisodes.has(n); n--) gap.unshift(n);
+    nowPlayingGapEl.textContent = "";
+    nowPlayingGapEl.hidden = gap.length === 0;
+    if (gap.length === 0) return;
+
+    const single = gap.length === 1;
+    nowPlayingGapEl.append(`${single ? "Poprzedni odcinek" : "Poprzednie odcinki"} nr `);
+    gap.forEach((num, i) => {
+      if (i > 0) nowPlayingGapEl.append(i === gap.length - 1 ? " i " : ", ");
+      appendEpisodeRef(nowPlayingGapEl, num);
+    });
+    nowPlayingGapEl.append(single ? " niedostępny" : " niedostępne");
+  }
+
   function renderMissingNote() {
     const missing = computeMissingEpisodes();
+    missingEpisodes = new Set(missing);
     if (missing.length === 0) {
       missingNoteEl.hidden = true;
       return;
@@ -140,17 +175,7 @@
     missingNoteEl.append(`Uwaga: ${single ? "nagranie odcinka" : "nagrania odcinków"} nr `);
     missing.forEach((num, i) => {
       if (i > 0) missingNoteEl.append(i === missing.length - 1 ? " i " : ", ");
-      const url = audiolessArticles[num];
-      if (url) {
-        const link = document.createElement("a");
-        link.href = url;
-        link.target = "_blank";
-        link.rel = "noopener";
-        link.textContent = String(num);
-        missingNoteEl.append(link);
-      } else {
-        missingNoteEl.append(String(num));
-      }
+      appendEpisodeRef(missingNoteEl, num);
     });
     missingNoteEl.append(
       ` ${single ? "nie jest dostępne" : "nie są dostępne"} w oficjalnych publicznych źródłach - ` +
@@ -266,6 +291,7 @@
 
     nowPlayingTitle.textContent = String(ep.episode);
     nowPlayingDate.textContent = formatDate(ep.date);
+    renderGapNote(ep);
 
     seekBar.value = 0;
     seekBar.max = 0;

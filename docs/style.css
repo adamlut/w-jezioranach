@@ -7,6 +7,8 @@
   --text-dim: #9aa4b5;
   --accent: #4fa3ff;
   --accent-dim: #2c5a8c;
+  --warn: #f2b33d;
+  --warn-bg: rgba(242, 179, 61, 0.14);
 }
 
 * {
@@ -413,6 +415,21 @@ main {
 #now-playing-date {
   font-size: 0.75rem;
   color: var(--text-dim);
+}
+
+.gap-note {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--warn);
+  background: var(--warn-bg);
+  border: 1px solid var(--warn);
+  border-radius: 999px;
+  padding: 0.1rem 0.6rem;
+  line-height: 1.4;
+}
+
+.gap-note a {
+  color: inherit;
 }
 
 .download-btn {
