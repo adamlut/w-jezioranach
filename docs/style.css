@@ -137,10 +137,30 @@ main {
   min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+}
+
+/* One tile grid per continuous block of the archive. */
+.tile-grid {
   display: grid;
-  align-content: start;
   grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
   gap: 0.75rem;
+}
+
+/* Explains an archive break between two blocks of tiles. */
+.archive-break {
+  margin: 1rem 0 0;
+  font-size: 0.8rem;
+  color: var(--warn);
+  background: var(--warn-bg);
+  border: 1px solid var(--warn);
+  border-radius: 8px;
+  padding: 0.6rem 0.8rem;
+}
+
+.archive-divider {
+  border: none;
+  border-top: 1px dashed var(--border);
+  margin: 1rem 0;
 }
 
 .group-tile {

@@ -36,6 +36,7 @@
   "use strict";
 
   const GROUP_SIZE = 25;
+  const ARCHIVE_BREAK_MIN_GAP = 100;
   const STORAGE_KEY = "wjezioranach:lastEpisode";
 
   const SKIP_SECONDS = 10;
@@ -72,7 +73,8 @@
   const nowPlayingGapEl = document.getElementById("now-playing-gap");
 
   let episodes = [];
-  let groups = []; // [{ startIndex, endIndex, startEpisode, endEpisode }]
+  let segments = []; // continuous blocks: [{ startIndex, endIndex }]
+  let groups = []; // [{ segmentIndex, startIndex, endIndex, startEpisode, endEpisode }]
   let currentIndex = -1;
   let activeGroupIndex = -1; // -1 means "show the groups grid"
   let isSeeking = false;
@@ -94,18 +96,39 @@
     return `${minutes}:${ss}`;
   }
 
+  // Splits episodes into continuous blocks wherever the numbering jumps by
+  // ARCHIVE_BREAK_MIN_GAP or more (e.g. #2859 in 2016 -> #3147 in 2022).
+  // Smaller holes stay inside a block and are listed in the missing notice;
+  // a break gets its own explanatory card between blocks instead.
+  function buildSegments() {
+    const result = [];
+    episodes.forEach((ep, i) => {
+      const prev = episodes[i - 1];
+      if (!prev || ep.episode - prev.episode >= ARCHIVE_BREAK_MIN_GAP) {
+        result.push({ startIndex: i, endIndex: i });
+      } else {
+        result[result.length - 1].endIndex = i;
+      }
+    });
+    return result;
+  }
+
+  // Groups of GROUP_SIZE, never straddling a segment break.
   function buildGroups() {
     const result = [];
-    for (let i = 0; i < episodes.length; i += GROUP_SIZE) {
-      const startIndex = i;
-      const endIndex = Math.min(i + GROUP_SIZE, episodes.length) - 1;
-      result.push({
-        startIndex,
-        endIndex,
-        startEpisode: episodes[startIndex].episode,
-        endEpisode: episodes[endIndex].episode,
-      });
-    }
+    segments.forEach((seg, segmentIndex) => {
+      for (let i = seg.startIndex; i <= seg.endIndex; i += GROUP_SIZE) {
+        const startIndex = i;
+        const endIndex = Math.min(i + GROUP_SIZE - 1, seg.endIndex);
+        result.push({
+          segmentIndex,
+          startIndex,
+          endIndex,
+          startEpisode: episodes[startIndex].episode,
+          endEpisode: episodes[endIndex].episode,
+        });
+      }
+    });
     return result;
   }
 
@@ -113,20 +136,58 @@
     return groups.findIndex((g) => index >= g.startIndex && index <= g.endIndex);
   }
 
-  // Episode numbers absent from the *currently scraped* range - not to be
-  // confused with the much larger range we simply haven't crawled yet
-  // (which sits outside [min, max] and is never flagged here). These are
-  // genuine gaps in Polskie Radio's own catalog.
+  // Episode numbers absent from inside a continuous block - genuine gaps in
+  // Polskie Radio's archive. Numbers between blocks (an archive break) and
+  // beyond what we've crawled are never flagged here.
   function computeMissingEpisodes() {
-    if (episodes.length === 0) return [];
     const present = new Set(episodes.map((ep) => ep.episode));
-    const min = episodes[0].episode;
-    const max = episodes[episodes.length - 1].episode;
     const missing = [];
-    for (let n = min; n <= max; n++) {
-      if (!present.has(n)) missing.push(n);
+    for (const seg of segments) {
+      for (let n = episodes[seg.startIndex].episode; n <= episodes[seg.endIndex].episode; n++) {
+        if (!present.has(n)) missing.push(n);
+      }
     }
     return missing;
+  }
+
+  // [2535, 2819, 2820, ..., 2841] -> [[2535], [2819, 2841]]: runs of three or
+  // more consecutive numbers collapse into a range.
+  function toRuns(numbers) {
+    const runs = [];
+    for (const n of numbers) {
+      const last = runs[runs.length - 1];
+      if (last && n === last[last.length - 1] + 1) last.push(n);
+      else runs.push([n]);
+    }
+    return runs.flatMap((run) => (run.length >= 3 ? [[run[0], run[run.length - 1]]] : run.map((n) => [n])));
+  }
+
+  function appendEpisodeList(parent, numbers) {
+    const parts = toRuns(numbers);
+    parts.forEach((part, i) => {
+      if (i > 0) parent.append(i === parts.length - 1 ? " i " : ", ");
+      if (part.length === 2) parent.append(`${part[0]}–${part[1]}`);
+      else appendEpisodeRef(parent, part[0]);
+    });
+  }
+
+  function shiftWeeks(isoDate, weeks) {
+    const d = new Date(`${isoDate}T12:00:00`);
+    d.setDate(d.getDate() + 7 * weeks);
+    return `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}.${d.getFullYear()}`;
+  }
+
+  function renderBreakCard(segmentIndex) {
+    const last = episodes[segments[segmentIndex].endIndex];
+    const next = episodes[segments[segmentIndex + 1].startIndex];
+    const card = document.createElement("div");
+    card.className = "archive-break";
+    card.textContent =
+      `Archiwum ciągłe kończy się na odcinku nr ${last.episode} z dnia ${formatDate(last.date)}. ` +
+      `Odcinki emitowane między ${shiftWeeks(last.date, 1)} a ${shiftWeeks(next.date, -1)} ` +
+      `(nr ${last.episode + 1}–${next.episode - 1}) są niedostępne w archiwum Polskiego Radia ` +
+      "lub nie mają potwierdzonej numeracji.";
+    return card;
   }
 
   function appendEpisodeRef(parent, num) {
@@ -148,16 +209,18 @@
   function renderGapNote(ep) {
     const gap = [];
     for (let n = ep.episode - 1; missingEpisodes.has(n); n--) gap.unshift(n);
+    // First episode after an archive break: the whole break is the gap.
+    const index = episodes.indexOf(ep);
+    if (gap.length === 0 && segments.some((seg) => seg.startIndex === index && index > 0)) {
+      for (let n = episodes[index - 1].episode + 1; n < ep.episode; n++) gap.push(n);
+    }
     nowPlayingGapEl.textContent = "";
     nowPlayingGapEl.hidden = gap.length === 0;
     if (gap.length === 0) return;
 
     const single = gap.length === 1;
     nowPlayingGapEl.append(`${single ? "Poprzedni odcinek" : "Poprzednie odcinki"} nr `);
-    gap.forEach((num, i) => {
-      if (i > 0) nowPlayingGapEl.append(i === gap.length - 1 ? " i " : ", ");
-      appendEpisodeRef(nowPlayingGapEl, num);
-    });
+    appendEpisodeList(nowPlayingGapEl, gap);
     nowPlayingGapEl.append(single ? " niedostępny" : " niedostępne");
   }
 
@@ -173,13 +236,10 @@
 
     const single = missing.length === 1;
     missingNoteEl.append(`Uwaga: ${single ? "nagranie odcinka" : "nagrania odcinków"} nr `);
-    missing.forEach((num, i) => {
-      if (i > 0) missingNoteEl.append(i === missing.length - 1 ? " i " : ", ");
-      appendEpisodeRef(missingNoteEl, num);
-    });
+    appendEpisodeList(missingNoteEl, missing);
     missingNoteEl.append(
       ` ${single ? "nie jest dostępne" : "nie są dostępne"} w oficjalnych publicznych źródłach - ` +
-        "w archiwum Polskiego Radia brak plików dźwiękowych. To nie błąd tej strony."
+        "w archiwum Polskiego Radia brak plików dźwiękowych lub samych odcinków. To nie błąd tej strony."
     );
   }
 
@@ -198,7 +258,19 @@
 
   function renderGroupGrid() {
     groupGridEl.innerHTML = "";
+    let tileGrid = null;
     groups.forEach((g, idx) => {
+      if (!tileGrid || g.segmentIndex !== groups[idx - 1].segmentIndex) {
+        if (tileGrid) {
+          groupGridEl.appendChild(renderBreakCard(groups[idx - 1].segmentIndex));
+          const divider = document.createElement("hr");
+          divider.className = "archive-divider";
+          groupGridEl.appendChild(divider);
+        }
+        tileGrid = document.createElement("div");
+        tileGrid.className = "tile-grid";
+        groupGridEl.appendChild(tileGrid);
+      }
       const tile = document.createElement("button");
       tile.type = "button";
       tile.className = "group-tile";
@@ -218,7 +290,7 @@
         activeGroupIndex = idx;
         render();
       });
-      groupGridEl.appendChild(tile);
+      tileGrid.appendChild(tile);
     });
   }
 
@@ -390,6 +462,7 @@
     const response = await fetch("episodes.json", { cache: "no-store" });
     episodes = await response.json();
     episodes.sort((a, b) => a.episode - b.episode);
+    segments = buildSegments();
     groups = buildGroups();
     try {
       const audioless = await fetch("audioless.json", { cache: "no-store" }).then((r) => r.json());

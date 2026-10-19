@@ -6,6 +6,12 @@
       "runtimeExecutable": "python",
       "runtimeArgs": ["-m", "http.server", "8000", "--directory", "docs"],
       "port": 8000
+    },
+    {
+      "name": "docs-static-server-fresh",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8011", "--directory", "docs"],
+      "port": 8011
     }
   ]
 }
