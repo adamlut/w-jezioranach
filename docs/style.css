@@ -96,6 +96,26 @@ main {
   margin-bottom: 0.75rem;
 }
 
+.missing-toggle {
+  flex: 0 0 auto;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  border: 1px solid var(--warn);
+  background: var(--warn-bg);
+  color: var(--warn);
+  font: inherit;
+  font-weight: 700;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.missing-toggle.active {
+  background: var(--warn);
+  color: var(--bg);
+}
+
 .missing-note {
   flex: 0 0 auto;
   margin: -0.25rem 0 0.75rem;
@@ -113,6 +133,9 @@ main {
 
 #search-box {
   flex: 1;
+  /* Inputs refuse to shrink below an intrinsic width by default, which
+     pushed the episode counter off-screen on phones. */
+  min-width: 0;
   background: var(--panel-alt);
   border: 1px solid var(--border);
   border-radius: 8px;

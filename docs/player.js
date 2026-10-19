@@ -71,6 +71,7 @@
   const searchBox = document.getElementById("search-box");
   const missingNoteEl = document.getElementById("missing-note");
   const nowPlayingGapEl = document.getElementById("now-playing-gap");
+  const missingToggleBtn = document.getElementById("missing-toggle");
 
   let episodes = [];
   let segments = []; // continuous blocks: [{ startIndex, endIndex }]
@@ -183,7 +184,7 @@
     const card = document.createElement("div");
     card.className = "archive-break";
     card.textContent =
-      `Archiwum ciągłe kończy się na odcinku nr ${last.episode} z dnia ${formatDate(last.date)}. ` +
+      `Starsze archiwum kończy się na odcinku nr ${last.episode} z dnia ${formatDate(last.date)}. ` +
       `Odcinki emitowane między ${shiftWeeks(last.date, 1)} a ${shiftWeeks(next.date, -1)} ` +
       `(nr ${last.episode + 1}–${next.episode - 1}) są niedostępne w archiwum Polskiego Radia ` +
       "lub nie mają potwierdzonej numeracji.";
@@ -227,11 +228,11 @@
   function renderMissingNote() {
     const missing = computeMissingEpisodes();
     missingEpisodes = new Set(missing);
-    if (missing.length === 0) {
-      missingNoteEl.hidden = true;
-      return;
-    }
-    missingNoteEl.hidden = false;
+    // Collapsed by default behind a "?" button next to the search box - on
+    // a phone the full list would eat much of the episode list's space.
+    missingToggleBtn.hidden = missing.length === 0;
+    missingNoteEl.hidden = true;
+    if (missing.length === 0) return;
     missingNoteEl.textContent = "";
 
     const single = missing.length === 1;
@@ -483,6 +484,12 @@
       render();
     });
     searchBox.addEventListener("input", () => render());
+    missingToggleBtn.addEventListener("click", () => {
+      const expand = missingNoteEl.hidden;
+      missingNoteEl.hidden = !expand;
+      missingToggleBtn.setAttribute("aria-expanded", String(expand));
+      missingToggleBtn.classList.toggle("active", expand);
+    });
 
     playPauseBtn.addEventListener("click", () => {
       if (audio.paused) audio.play().catch(() => {});
