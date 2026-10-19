@@ -61,6 +61,12 @@ published without a separate branch:
 4. Save. The site will be published at
    `https://<username>.github.io/<repo>/`.
 
+When `docs/player.js` or `docs/style.css` change, bump the `?v=` date on
+their references in `docs/index.html`. GitHub Pages lets browsers cache files
+for ~10 minutes, and without the version bump a phone can briefly pair a new
+page with an old script (or vice versa). Data-only updates (`episodes.json`,
+`audioless.json`) don't need it - they're always fetched fresh.
+
 This is a small, family-only project and isn't meant to be discovered or
 shared publicly. [`docs/robots.txt`](docs/robots.txt) asks crawlers not to
 index it, and `index.html` also carries a `<meta name="robots"

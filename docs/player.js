@@ -208,6 +208,7 @@
   // Flags when the episode(s) right before the current one are a known gap,
   // so a listener going in order notices they're skipping a missing part.
   function renderGapNote(ep) {
+    if (!nowPlayingGapEl) return; // cached older index.html without the pill
     const gap = [];
     for (let n = ep.episode - 1; missingEpisodes.has(n); n--) gap.unshift(n);
     // First episode after an archive break: the whole break is the gap.
@@ -230,8 +231,10 @@
     missingEpisodes = new Set(missing);
     // Collapsed by default behind a "?" button next to the search box - on
     // a phone the full list would eat much of the episode list's space.
-    missingToggleBtn.hidden = missing.length === 0;
-    missingNoteEl.hidden = true;
+    // The button can be absent if a cached older index.html is paired with
+    // this script right after a deploy - then just show the note expanded.
+    if (missingToggleBtn) missingToggleBtn.hidden = missing.length === 0;
+    missingNoteEl.hidden = Boolean(missingToggleBtn) || missing.length === 0;
     if (missing.length === 0) return;
     missingNoteEl.textContent = "";
 
@@ -484,7 +487,7 @@
       render();
     });
     searchBox.addEventListener("input", () => render());
-    missingToggleBtn.addEventListener("click", () => {
+    missingToggleBtn?.addEventListener("click", () => {
       const expand = missingNoteEl.hidden;
       missingNoteEl.hidden = !expand;
       missingToggleBtn.setAttribute("aria-expanded", String(expand));
